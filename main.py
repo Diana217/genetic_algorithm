@@ -36,11 +36,7 @@ Gene.__repr__ = lambda g: gen_repr(g)
 # data for schedule
 classrooms = [
     Classroom(1, True),
-    Classroom(2, True),
-    Classroom(3, True),
-    Classroom(4, False),
-    Classroom(5, False),
-    Classroom(6, False)
+    Classroom(2, True)
 ]
 
 schedule = [Time(w, n) for w in range(1, len(weekdays.keys()) + 1)
@@ -97,10 +93,9 @@ def create_population(lessons_: List[Lesson], classrooms_: List[Classroom], time
         g_rooms = choices(classrooms_, k=len(lessons_))
         g_times = choices(times, k=len(lessons_))
         population.append(Gene(lessons_, g_rooms, g_times))
-
     return population
 
-GROUP_LESSONS_COUNT = sum([len(lesson.group) for lesson in lessons]) #  62
+GROUP_LESSONS_COUNT = sum([len(lesson.group) for lesson in lessons])
 def heuristic(gene: Gene) -> int:
     """Value function for gene."""
     output = 0
@@ -131,10 +126,18 @@ def mutate(gene: Gene, classrooms_: List[Classroom], times: List[Time]) -> Gene:
 
 def children(gens: List[Gene], classrooms_, times):
     new_pop = []
-    for g in gens:
-        for _ in range(CHILDREN_PER_GENE):
-            new_pop.append(mutate(g, classrooms_, times))
+    for i in range(0, len(gens), 2):
+        new_pop.append(crossover(gens[i], gens[i + 1], classrooms_, times))
     return new_pop
+
+
+def crossover(parent1: Gene, parent2: Gene, classrooms_: List[Classroom], times: List[Time]) -> Gene:
+    crossover_point = randrange(1, len(parent1.lessons) - 1)
+    child_lessons = parent1.lessons[:crossover_point] + parent2.lessons[crossover_point:]
+    child_classrooms = parent1.classrooms[:crossover_point] + parent2.classrooms[crossover_point:]
+    child_times = parent1.times[:crossover_point] + parent2.times[crossover_point:]
+    return Gene(lessons=child_lessons, classrooms=child_classrooms, times=child_times)
+
 
 def print_schedule(solution: Gene, ):
     for day in weekdays:
@@ -156,6 +159,7 @@ while heuristic(population[0]) and MAX_STEPS-steps:
     population.sort(key=heuristic)
     population = population[:ELITE_POPULATION]
     population += children(population, classrooms, schedule)
+    population = [mutate(g, classrooms, schedule) for g in population]
     steps += 1
     #print(steps)
 
